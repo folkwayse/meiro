@@ -423,3 +423,21 @@ func TestReportProblemOpensPrefilledIssue(t *testing.T) {
 		}
 	}
 }
+
+func TestSettingsShowBundledToolVersions(t *testing.T) {
+	a := newTestApp()
+	a.router.Push("/settings")
+	tt := ui.NewTester(a.view, 1000, 5000)
+	tt.Frame()
+	tt.Frame()
+
+	if !tt.HasText("Bundled tools") {
+		t.Fatalf("settings lack the tools card: %q", tt.Texts())
+	}
+	if tt.HasText("yt-dlp Looking up…") {
+		t.Errorf("the versions were never looked up: %q", tt.Texts())
+	}
+	if !a.toolsLoaded {
+		t.Error("opening settings did not read the tool versions")
+	}
+}
