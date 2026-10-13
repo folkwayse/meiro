@@ -547,3 +547,45 @@ func TestEditingTheQueueKeepsPlayingAndFollowsTheEdits(t *testing.T) {
 		t.Errorf("after clearing: %v, playing %q", got, a.current.VideoID)
 	}
 }
+
+func TestEditingTheQueueFromItsPanel(t *testing.T) {
+	a, _ := playbackApp(t)
+	q := tracks("a", "b", "c", "d")
+	a.play(q[0], q)
+	a.nowPlaying.open, a.nowPlaying.queueOnly, a.nowPlaying.playerShown = true, true, true
+	tt := ui.NewTester(a.nowPlayingView, 1000, 700)
+
+	if err := tt.Click("Remove Track b from the queue"); err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(a.queue.items); !slices.Equal(got, []string{"a", "c", "d"}) {
+		t.Fatalf("after remove: %v", got)
+	}
+	if tt.HasText("Remove Track a from the queue") {
+		t.Error("the track playing offers a remove button")
+	}
+
+	// Drag the last row above the one before it.
+	from, ok1 := tt.Find("Track d")
+	to, ok2 := tt.Find("Track c")
+	if !ok1 || !ok2 {
+		t.Fatalf("rows missing: %q", tt.Texts())
+	}
+	fx, fy := from.X+from.W/2, from.Y+from.H/2
+	tt.Press(fx, fy)
+	for y := fy; y > to.Y; y -= 4 {
+		tt.Move(fx, y)
+	}
+	tt.Move(fx, to.Y+2)
+	tt.Release(fx, to.Y+2)
+	if got := ids(a.queue.items); !slices.Equal(got, []string{"a", "d", "c"}) {
+		t.Fatalf("after drag: %v", got)
+	}
+
+	if err := tt.Click("Clear queue"); err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(a.queue.items); !slices.Equal(got, []string{"a"}) || a.current.VideoID != "a" {
+		t.Errorf("after clear: %v, playing %q", got, a.current.VideoID)
+	}
+}
